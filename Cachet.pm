@@ -15,8 +15,8 @@ my @EXPORT_OK = ();
 sub new {
 	my $pkg = shift;
 	my $self = {};
-	
-	$self->{'baseUrl'} = '';	
+
+	$self->{'baseUrl'} = '';
 	$self->{'email'} = '';
 	$self->{'password'} = '';
 	$self->{'apiToken'} = '';
@@ -86,14 +86,14 @@ sub sanityCheck {
 sub curlGet {
 	my $self = shift;
 	my $url = shift;
-	my $responseBody; 
+	my $responseBody;
 	my $curl = WWW::Curl::Easy->new;
-	
+
 	$curl->setopt(CURLOPT_HEADER,0);
 	$curl->setopt(CURLOPT_URL,$url);
 	$curl->setopt(CURLOPT_WRITEDATA,\$responseBody);
 
-	my $retcode = $curl->perform;	
+	my $retcode = $curl->perform;
 	if($retcode == 0) {
 		my $decoded = decode_json($responseBody);
 		#TODO: Error handling for decode_json
@@ -109,20 +109,20 @@ sub curlPut {
 	my $url = shift;
 	my $data = shift;
 	my $curl = WWW::Curl::Easy->new;
-	my $responseBody; 
+	my $responseBody;
 
 	$curl->setopt(CURLOPT_HEADER,0);
 	$curl->setopt(CURLOPT_URL,$url);
 	$curl->setopt(CURLOPT_CUSTOMREQUEST,'PUT');
 	$curl->setopt(CURLOPT_POSTFIELDS,$data);
-	
-	my @HTTPHeader = (); 
+
+	my @HTTPHeader = ();
 	my $authorisationHeader = 'Authorization: Basic ' . encode_base64($self->{'email'} . ':' . $self->{'password'});
 
 	if($self->{'apiToken'}) {
 		$authorisationHeader = 'X-Cachet-Token: ' . $self->{'apiToken'};
 	}
-		
+
 	push(@HTTPHeader,$authorisationHeader);
 	$curl->setopt(CURLOPT_WRITEDATA,\$responseBody);
 	$curl->setopt(CURLOPT_HTTPHEADER,\@HTTPHeader);
@@ -142,20 +142,20 @@ sub curlPost {
 	my $url = shift;
 	my $data = shift;
 	my $curl = WWW::Curl::Easy->new;
-	my $responseBody; 
+	my $responseBody;
 
 	$curl->setopt(CURLOPT_HEADER,0);
 	$curl->setopt(CURLOPT_URL,$url);
 	$curl->setopt(CURLOPT_POST,1);
 	$curl->setopt(CURLOPT_POSTFIELDS,$data);
-	
-	my @HTTPHeader = (); 
+
+	my @HTTPHeader = ();
 	my $authorisationHeader = 'Authorization: Basic ' . encode_base64($self->{'email'} . ':' . $self->{'password'});
 
 	if($self->{'apiToken'}) {
 		$authorisationHeader = 'X-Cachet-Token: ' . $self->{'apiToken'};
 	}
-		
+
 	push(@HTTPHeader,$authorisationHeader);
 	$curl->setopt(CURLOPT_WRITEDATA,\$responseBody);
 	$curl->setopt(CURLOPT_HTTPHEADER,\@HTTPHeader);
@@ -177,7 +177,7 @@ sub curlDelete {
 sub ping {
 	my $self = shift;
 	$self->sanityCheck(0);
-	
+
 	my $url = $self->{'baseUrl'} . 'ping';
 	return $self->curlGet($url);
 }
@@ -189,11 +189,38 @@ sub get {
 		die('cachet.php: Invalid type specfied. Must be \'components\', \'incidents\' or \'metrics\'');
 	}
 	$self->sanityCheck(0);
-	
+
 	my $url = $self->{'baseUrl'} . $type;
 	return $self->curlGet($url);
 }
 
+# Perform an API search by passing in a reference to a hash containing the
+# name/value pairs of each serch item.
+sub search {
+	my $self = shift;
+	my $type = shift;
+	my $hashRef = shift;  # Reference to a name/value hash
+
+	if($type ne 'components' && $type ne 'incidents' && $type ne 'metrics') {
+		die('cachet.php: Invalid type specfied. Must be \'components\', \'incidents\' or \'metrics\'');
+	}
+	$self->sanityCheck(0);
+
+	# Make sure a valid hash reference has been supplied
+	if (not defined $hashRef) {
+		die('cachet.php: Invalid search criteria.  Must be a valid hash reference');
+	}
+
+	# Construct the base URL
+	my $url = $self->{'baseUrl'} . $type . "?";
+
+	# Dereference the hash and append the name/value pairs to the URL
+	foreach (keys %{$hashRef}) {
+		$url .= $_ . "=" . $hashRef->{$_};
+	}
+
+	return $self->curlGet($url);
+}
 
 sub getById {
 	my $self = shift;
@@ -229,7 +256,7 @@ sub setComponentStatusById {
 		die('cachet.pm: You attempted to set a component status by ID without specifying an ID.');
 	}
 	my $url = $self->{'baseUrl'} . 'components/' . $id;
-	my $requestData = 'status='.$status;	
+	my $requestData = 'status='.$status;
 	return $self->curlPut($url,$requestData);
 }
 
@@ -255,7 +282,7 @@ sub createComponent {
 	my $requestData = "";
 	$requestData .= 'name='.$name . '&';
 	$requestData .= 'status='.$status . '&';
-	
+
 	if($description) {
 		$requestData .= 'message='.$description . '&';
 	}
@@ -268,7 +295,7 @@ sub createComponent {
 	if($groupID) {
 		$requestData .= 'group_id='.$groupID;
 	}
-	return $self->curlPost($url,$requestData);	
+	return $self->curlPost($url,$requestData);
 
 }
 
@@ -286,7 +313,7 @@ sub updateComponent {
 	my $url = $self->{'baseUrl'} . 'components/' . $id;
 	my $requestData = "";
 	$requestData .= 'id='.$id. '&';
-	
+
 	if($name) {
 		$requestData .= 'name='.$name. '&';
 	}
@@ -303,7 +330,7 @@ sub updateComponent {
 		$requestData .= 'group_id='.$groupID;
 	}
 
-	return $self->curlPut($url,$requestData);	
+	return $self->curlPut($url,$requestData);
 }
 
 sub getIncidents {
@@ -326,7 +353,7 @@ sub createIncident {
 	my $requestData = "";
 	$requestData .= 'name='.$name . '&';
 	$requestData .= 'status='.$status . '&';
-	
+
 	if($message) {
 		$requestData .= 'message='.$message . '&';
 	}
@@ -336,7 +363,7 @@ sub createIncident {
 	if($notify) {
 		$requestData .= 'notify='.$notify;
 	}
-	return $self->curlPost($url,$requestData);	
+	return $self->curlPost($url,$requestData);
 }
 
 sub updateIncident {
@@ -348,7 +375,7 @@ sub updateIncident {
 	my $requestData = "";
 	$requestData .= 'name='.$name . '&';
 	$requestData .= 'status='.$status . '&';
-	
+
 	if($message) {
 		$requestData .= 'message='.$message . '&';
 	}
@@ -358,7 +385,7 @@ sub updateIncident {
 	if($notify) {
 		$requestData .= 'notify='.$notify;
 	}
-	return $self->curlPut($url,$requestData);	
+	return $self->curlPut($url,$requestData);
 }
 
 sub deleteIncident {
