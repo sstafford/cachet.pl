@@ -5,6 +5,7 @@ use warnings;
 use WWW::Curl::Easy;
 use JSON;
 use MIME::Base64;
+use URI::Escape;
 
 my @ISA = qw(Exporter);
 my @EXPORT = ();
@@ -144,6 +145,9 @@ sub curlPost {
 	my $curl = WWW::Curl::Easy->new;
 	my $responseBody;
 
+	# Make sure the data is URL encoded
+	#my $escData = uri_escape($data);
+
 	$curl->setopt(CURLOPT_HEADER,0);
 	$curl->setopt(CURLOPT_URL,$url);
 	$curl->setopt(CURLOPT_POST,1);
@@ -162,6 +166,9 @@ sub curlPost {
 	my $retcode = $curl->perform;
 	if($retcode == 0) {
 		my $decoded = decode_json($responseBody);
+        if ($decoded->{'errors'}) {
+			die("Cachet request failed: " . $responseBody);
+		}
 		#TODO: Error handling for decode_json
 		return $decoded->{'data'};
 	} else {
@@ -345,46 +352,75 @@ sub getIncidentById {
 }
 
 sub createIncident {
-	my ($self,$name,$status,$message,$component_id,$notify) = @_;
+	my ($self,$name,$status,$message,$component_id,$component_status,$notify,$visible) = @_;
 	if(!defined($name) or !defined($status)) {
 		die('cachet.pm: Missing status and/or name while creating incident');
 	}
 	my $url = $self->{'baseUrl'} . 'incidents';
 	my $requestData = "";
-	$requestData .= 'name='.$name . '&';
-	$requestData .= 'status='.$status . '&';
 
-	if($message) {
-		$requestData .= 'message='.$message . '&';
+	# Required parameter: name
+	$requestData .= 'name=' . $name . '&';
+
+	# Required parameter: message
+	$requestData .= 'message='.$message . '&';
+
+    # Optional parameter: component_id
+	if ($component_id) {
+		$requestData .= 'component_id=' . $component_id . '&';
 	}
-	if($component_id) {
-		$requestData .= 'component_id='.$component_id . '&';
+
+	# Optional parameter: component_status
+	if ($component_status) {
+		$requestData .= 'component_status=' . $component_status . '&';
 	}
-	if($notify) {
-		$requestData .= 'notify='.$notify;
+
+	if ($notify) {
+		$requestData .= 'notify=' . $notify . '&';
 	}
+
+	# Required parameter: visible
+	$requestData .= 'visible=' . $visible . '&';
+
+    # Required parameter: status
+	# Last parameter, so no ampersand appended to the end of the request data string
+	$requestData .= 'status=' . $status;
+
 	return $self->curlPost($url,$requestData);
 }
 
 sub updateIncident {
-	my ($self,$id,$name,$status,$message,$component_id,$notify) = @_;
+	my ($self,$id,$name,$status,$message,$component_id,$component_status,$notify,$visible) = @_;
 	if(!$id or !$name or !$status) {
 		die('cachet.pm: Missing id, status and/or name while updating incident');
 	}
 	my $url = $self->{'baseUrl'} . 'incidents/' . $id ;
 	my $requestData = "";
-	$requestData .= 'name='.$name . '&';
-	$requestData .= 'status='.$status . '&';
 
-	if($message) {
-		$requestData .= 'message='.$message . '&';
+	$requestData .= 'name=' . $name . '&';
+
+	if ($message) {
+		$requestData .= 'message=' . $message . '&';
 	}
-	if($component_id) {
-		$requestData .= 'component_id='.$component_id . '&';
+
+	if ($component_id) {
+		$requestData .= 'component_id=' . $component_id . '&';
 	}
-	if($notify) {
-		$requestData .= 'notify='.$notify;
+
+	if ($component_status) {
+		$requestData .= 'component_status=' . $component_status . '&';
 	}
+
+	if ($notify) {
+		$requestData .= 'notify=' . $notify . '&';
+	}
+
+	if ($visible) {
+		$requestData .= 'visible=' . $visible . '&';
+	}
+
+	$requestData .= 'status=' . $status;
+
 	return $self->curlPut($url,$requestData);
 }
 

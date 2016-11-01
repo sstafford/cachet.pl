@@ -1,11 +1,16 @@
 #!/bin/bash
 
-#COMPONENT="TestComponentA"
-COMPNAME="Documentation"
-COMPIMPACT="major"
-SERVICEDESC="http status"
-SERVICESTATE="CRITICAL"
-SERVICESTATETYPE="HARD"
-SERVICEOUTPUT="404 page not found"
+scriptdir=`dirname $0`
+scriptdir=`cd $scriptdir; pwd`
 
-./cachet_handler.pl "$COMPNAME" "$COMPIMPACT" "$SERVICEDESC" "$SERVICESTATE" "$SERVICESTATETYPE" "$SERVICEOUTPUT"
+CONFIGFILE="$scriptdir/cachet_handler.properties"
+COMPNAME="TestComponentB"
+# major, partial, performance
+COMPIMPACT="partial"
+SERVICEDESC="http service"
+# OK, WARNING, UNKNOWN, CRITICAL
+SERVICESTATE="OK"
+SERVICESTATETYPE="HARD"
+SERVICEOUTPUT="404 file not found"
+
+./cachet_handler.pl "$CONFIGFILE" "$COMPNAME" "$COMPIMPACT" "$SERVICEDESC" "$SERVICESTATE" "$SERVICESTATETYPE" "$SERVICEOUTPUT"
